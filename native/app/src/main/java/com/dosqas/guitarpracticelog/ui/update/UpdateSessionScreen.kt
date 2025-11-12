@@ -12,7 +12,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.dosqas.guitarpracticelog.data.PracticeSession
+import com.dosqas.guitarpracticelog.data.model.PracticeSession
 import com.dosqas.guitarpracticelog.viewmodel.PracticeViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -37,15 +37,22 @@ fun UpdateSessionScreen(
     var dateError by remember { mutableStateOf(false) }
     var dateInvalid by remember { mutableStateOf(false) }
     var durationError by remember { mutableStateOf(false) }
-    var durationInvalid by remember { mutableStateOf(false)}
+    var durationInvalid by remember { mutableStateOf(false) }
     var focusAreaError by remember { mutableStateOf(false) }
+
+    val insertSuccess by viewModel.success
+    val errorMessage by viewModel.errorMessage
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Update Session") },
                 navigationIcon = {
-                    IconButton(onClick = { onBack() }) {
+                    IconButton(onClick = {
+                        onBack()
+                        viewModel.clearError()
+                        viewModel.clearSuccess()
+                    }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
@@ -76,8 +83,8 @@ fun UpdateSessionScreen(
                                 focusArea = focusArea,
                                 notes = notes
                             )
+
                             viewModel.updateSession(updatedSession)
-                            onSave()
                         }
                     }) {
                         Icon(Icons.Default.Check, contentDescription = "Save")
@@ -98,6 +105,9 @@ fun UpdateSessionScreen(
                 onValueChange = {
                     songTitle = it
                     if (it.isNotBlank()) songTitleError = false
+
+                    viewModel.clearError()
+                    viewModel.clearSuccess()
                 },
                 label = { Text("Song Title") },
                 isError = songTitleError,
@@ -115,6 +125,9 @@ fun UpdateSessionScreen(
 
                     dateError = false
                     dateInvalid = false
+
+                    viewModel.clearError()
+                    viewModel.clearSuccess()
                 },
                 label = { Text("Date (YYYY-MM-DD)") },
                 singleLine = true,
@@ -131,9 +144,11 @@ fun UpdateSessionScreen(
                 value = duration,
                 onValueChange = {
                     duration = it
-                    // Clear error when user types
                     durationError = false
                     durationInvalid = false
+
+                    viewModel.clearError()
+                    viewModel.clearSuccess()
                 },
                 label = { Text("Duration (minutes)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -154,6 +169,9 @@ fun UpdateSessionScreen(
                 onValueChange = {
                     focusArea = it
                     if (it.isNotBlank()) focusAreaError = false
+
+                    viewModel.clearError()
+                    viewModel.clearSuccess()
                 },
                 label = { Text("Focus Area") },
                 isError = focusAreaError,
@@ -166,10 +184,29 @@ fun UpdateSessionScreen(
 
             OutlinedTextField(
                 value = notes,
-                onValueChange = { notes = it },
+                onValueChange = {
+                    notes = it
+                    viewModel.clearError()
+                    viewModel.clearSuccess()
+                },
                 label = { Text("Notes (optional)") },
                 modifier = Modifier.fillMaxWidth()
             )
+
+            errorMessage?.let { msg ->
+                Text(
+                    text = msg,
+                    color = Color.Red,
+                    modifier = Modifier.padding(8.dp)
+                )
+            }
+
+            LaunchedEffect(insertSuccess) {
+                if (insertSuccess) {
+                    onSave()
+                    viewModel.clearSuccess()
+                }
+            }
         }
     }
 }
