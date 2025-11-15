@@ -28,7 +28,7 @@ class PracticeSessionController(private val service: PracticeSessionService) {
     }
 
     @PutMapping("/{id}")
-    fun update(@PathVariable id: Long, @RequestBody session: PracticeSession): PracticeSession {
+    fun update(@PathVariable id: Long, @RequestBody session: PracticeSession): PracticeSession? {
         logger.info("PUT /sessions/$id called")
         val updated = service.updateSession(id, session)
         logger.debug("Updated session: {}", updated)

@@ -30,6 +30,7 @@ class SyncWorker(
                     }
                     SyncStatus.WAITING_FOR_UPDATE -> {
                         val updated = RetrofitInstance.api.updateSession(session.id, session.toRequestDto())
+                        if (updated == null) dao.deleteSession(session.id)
                         dao.updateSession(updated.toEntity(SyncStatus.SYNCED))
                     }
                     SyncStatus.WAITING_FOR_DELETE -> {

@@ -15,20 +15,11 @@ import com.dosqas.guitarpracticelog.data.remote.PracticeApi
 import com.dosqas.guitarpracticelog.data.remote.toRequestDto
 import com.dosqas.guitarpracticelog.data.remote.toEntity
 import com.dosqas.guitarpracticelog.worker.SyncWorker
-import com.google.gson.Gson
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
-import okhttp3.OkHttpClient
 import okio.IOException
-import ua.naiksoftware.stomp.Stomp
-import ua.naiksoftware.stomp.StompClient
-import ua.naiksoftware.stomp.dto.StompMessage
-import ua.naiksoftware.stomp.provider.OkHttpConnectionProvider
 import java.util.concurrent.TimeUnit
 
 class PracticeRepositoryImpl(
@@ -36,7 +27,6 @@ class PracticeRepositoryImpl(
     private val api: PracticeApi,
     private val appContext: Context
 ) : PracticeRepository {
-
     private suspend fun <T> withApiTimeout(block: suspend () -> T): T {
         return withTimeout(300) {
             block()
@@ -51,18 +41,25 @@ class PracticeRepositoryImpl(
                 val serverSessions = withApiTimeout { api.getAllSessions() }
                 val localSessions = dao.getAllSessionsOnce()
 
-                serverSessions.forEach { serverSession ->
-                    val local = localSessions.find { it.id == serverSession.id }
-                    if (local == null || local.status == SyncStatus.SYNCED) {
-                        dao.insertSession(serverSession.copy(status = SyncStatus.SYNCED))
-                    }
-                }
+                // Keep only local sessions that are not synced (pending)
+                val pendingLocal = localSessions.filter { it.status != SyncStatus.SYNCED }
+
+                // Clear local cache for synced sessions
+                dao.getAllSessionsOnce()
+                    .filter { it.status == SyncStatus.SYNCED }
+                    .forEach { dao.deleteSession(it.id) }
+
+                // Insert server sessions as SYNCED
+                serverSessions.forEach { dao.insertSession(it.copy(status = SyncStatus.SYNCED)) }
+
+                // Re-insert pending local sessions
+                pendingLocal.forEach { dao.insertSession(it) }
 
                 cachedSessions = dao.getAllSessionsOnce()
-                Log.d("Repository", "Initial server sessions cached")
+                Log.d("Repository", "Server sessions cached with pending sessions preserved")
             } catch (e: Exception) {
                 Log.w("Repository", "Server unavailable, using local DB", e)
-                cachedSessions = dao.getAllSessionsOnce()
+                cachedSessions = dao.getAllSessionsOnce().filter { it.status != SyncStatus.SYNCED }
             }
         }
 
