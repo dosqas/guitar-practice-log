@@ -16,5 +16,6 @@ data class PracticeSession(
     val date: LocalDate,
     val durationMinutes: Int,
     val focusArea: String,
-    val notes: String? = null
+    val notes: String? = null,
+    val status: SyncStatus = SyncStatus.WAITING_FOR_ADD
 )

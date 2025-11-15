@@ -8,9 +8,27 @@ import com.dosqas.guitarpracticelog.data.model.PracticeSession
 import com.dosqas.guitarpracticelog.data.repository.PracticeRepository
 import kotlinx.coroutines.launch
 import android.util.Log
+import com.dosqas.guitarpracticelog.data.remote.RetrofitInstance.api
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.stateIn
+import java.io.IOException
+import retrofit2.HttpException
 
 class PracticeViewModel(val repository: PracticeRepository) : ViewModel() {
+
+    // Error state observed by the UI
+    private val _errorMessage = mutableStateOf<String?>(null)
+    val errorMessage: State<String?> = _errorMessage
+
+    private val _networkError = mutableStateOf<String?>(null)
+    val networkError: State<String?> = _networkError
+
+    // Success state observed by the UI
+    private val _success = mutableStateOf(false)
+    val success: State<Boolean> = _success
 
     // Sessions retrieved once and exposed as LiveData
     private val _sessions = mutableStateOf<List<PracticeSession>>(emptyList())
@@ -21,7 +39,11 @@ class PracticeViewModel(val repository: PracticeRepository) : ViewModel() {
             repository.getAllSessions()
                 .catch { e ->
                     Log.e("PracticeViewModel", "Fetching sessions failed", e)
-                    _errorMessage.value = "Failed to load sessions: ${e.message}"
+
+                    _errorMessage.value = when (e) {
+                        is IOException -> "Cannot reach server. Displaying local data."
+                        else -> "Failed to load sessions: please try again."
+                    }
                 }
                 .collect { list ->
                     _sessions.value = list
@@ -29,14 +51,17 @@ class PracticeViewModel(val repository: PracticeRepository) : ViewModel() {
         }
     }
 
-
-    // Error state observed by the UI
-    private val _errorMessage = mutableStateOf<String?>(null)
-    val errorMessage: State<String?> = _errorMessage
-
-    // Success state observed by the UI
-    private val _success = mutableStateOf(false)
-    val success: State<Boolean> = _success
+    val networkStatusFlow = flow {
+        while (true) {
+            try {
+                api.pingServer()
+                emit(null)
+            } catch (_: Exception) {
+                emit("Server is down. Showing saved local data.")
+            }
+            delay(5_000L)
+        }
+    }.stateIn(viewModelScope, SharingStarted.Lazily, null)
 
     fun insertSession(session: PracticeSession) = viewModelScope.launch {
         try {
@@ -45,8 +70,13 @@ class PracticeViewModel(val repository: PracticeRepository) : ViewModel() {
             _success.value = true
         } catch (e: Exception) {
             Log.e("PracticeViewModel", "Insert failed", e)
-            _errorMessage.value = "Failed to add session: ${e.message}"
             _success.value = false
+
+            _errorMessage.value = when (e) {
+                is IOException -> "Cannot reach server temporarily. The operation is saved and will sync when online."
+                is HttpException -> "Server error (${e.code()}). Please try again later."
+                else -> "Unexpected error occurred. Please try again."
+            }
         }
     }
 
@@ -57,8 +87,13 @@ class PracticeViewModel(val repository: PracticeRepository) : ViewModel() {
             _success.value = true
         } catch (e: Exception) {
             Log.e("PracticeViewModel", "Update failed", e)
-            _errorMessage.value = "Failed to update session: ${e.message}"
             _success.value = false
+
+            _errorMessage.value = when (e) {
+                is IOException -> "Cannot reach server temporarily. The operation is saved and will sync when online."
+                is HttpException -> "Server error (${e.code()}). Please try again later."
+                else -> "Unexpected error occurred. Please try again."
+            }
         }
     }
 
@@ -68,7 +103,12 @@ class PracticeViewModel(val repository: PracticeRepository) : ViewModel() {
             _errorMessage.value = null
         } catch (e: Exception) {
             Log.e("PracticeViewModel", "Delete failed", e)
-            _errorMessage.value = "Failed to delete session: ${e.message}"
+
+            _errorMessage.value = when (e) {
+                is IOException -> "Cannot reach server temporarily. The operation is saved and will sync when online."
+                is HttpException -> "Server error (${e.code()}). Please try again later."
+                else -> "Unexpected error occurred. Please try again."
+            }
         }
     }
 
@@ -78,5 +118,9 @@ class PracticeViewModel(val repository: PracticeRepository) : ViewModel() {
 
     fun clearSuccess() {
         _success.value = false
+    }
+
+    fun clearNetworkError() {
+        _networkError.value = null
     }
 }

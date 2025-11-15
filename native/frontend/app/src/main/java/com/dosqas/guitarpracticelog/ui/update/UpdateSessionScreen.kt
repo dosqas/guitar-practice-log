@@ -41,7 +41,6 @@ fun UpdateSessionScreen(
     var focusAreaError by remember { mutableStateOf(false) }
 
     val insertSuccess by viewModel.success
-    val errorMessage by viewModel.errorMessage
 
     Scaffold(
         topBar = {
@@ -192,14 +191,6 @@ fun UpdateSessionScreen(
                 label = { Text("Notes (optional)") },
                 modifier = Modifier.fillMaxWidth()
             )
-
-            errorMessage?.let { msg ->
-                Text(
-                    text = msg,
-                    color = Color.Red,
-                    modifier = Modifier.padding(8.dp)
-                )
-            }
 
             LaunchedEffect(insertSuccess) {
                 if (insertSuccess) {
