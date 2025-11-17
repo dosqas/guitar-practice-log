@@ -51,7 +51,7 @@ abstract class AppDatabase : RoomDatabase() {
                     instance = Room.databaseBuilder(
                         context.applicationContext,
                         AppDatabase::class.java,
-                        "practice_db"
+                        "practice_db3"
                     )
                         .addMigrations(migration2to3, migration3to4)
                         .build()

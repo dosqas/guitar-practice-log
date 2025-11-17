@@ -117,35 +117,47 @@ class RealtimeSyncManager(
     private suspend fun handleWsMessage(message: WsMessage) {
         when (message.type) {
 
-            // 🔵 Server pushed NEW session
+            // 🔵 ADD
             "SESSION_ADDED" -> {
                 val session = gson.fromJson(message.payload, PracticeSession::class.java)
-                dao.insertSession(session.copy(status = SyncStatus.SYNCED))
-                Log.i(TAG, "Real-time ADD: ${session.songTitle}")
-            }
-
-            // 🔵 Server pushed UPDATED session
-            "SESSION_UPDATED" -> {
-                val session = gson.fromJson(message.payload, PracticeSession::class.java)
-                dao.updateSession(session.copy(status = SyncStatus.SYNCED))
-                Log.i(TAG, "Real-time UPDATE: ${session.songTitle}")
-            }
-
-            // 🔴 Server pushed DELETE
-            "SESSION_DELETED" -> {
-                val id = message.payload.asInt
-                val session = dao.getSessionById(id)
-                if (session != null) {
-                    dao.deleteSession(id)
-                    Log.i(TAG, "Real-time DELETE: ID $id")
+                val existing = dao.getSessionById(session.id)
+                if (existing == null) {
+                    dao.insertSession(session.copy(status = SyncStatus.SYNCED))
+                    Log.i(TAG, "Real-time ADD: ${session.songTitle}")
+                } else {
+                    Log.i(TAG, "ADD skipped, session already exists: ${session.songTitle}")
                 }
             }
 
-            else -> {
-                Log.w(TAG, "Unknown WebSocket message type: ${message.type}")
+            // 🔵 UPDATE
+            "SESSION_UPDATED" -> {
+                val session = gson.fromJson(message.payload, PracticeSession::class.java)
+                val existing = dao.getSessionById(session.id)
+                if (existing != null && existing != session) {
+                    // compare fields to avoid redundant updates
+                    dao.updateSession(session.copy(status = SyncStatus.SYNCED))
+                    Log.i(TAG, "Real-time UPDATE: ${session.songTitle}")
+                } else {
+                    Log.i(TAG, "UPDATE skipped, no changes or session not found: ${session.songTitle}")
+                }
             }
+
+            // 🔴 DELETE
+            "SESSION_DELETED" -> {
+                val id = message.payload.asInt
+                val existing = dao.getSessionById(id)
+                if (existing != null) {
+                    dao.deleteSession(id)
+                    Log.i(TAG, "Real-time DELETE: ID $id")
+                } else {
+                    Log.i(TAG, "DELETE skipped, session not found: ID $id")
+                }
+            }
+
+            else -> Log.w(TAG, "Unknown WebSocket message type: ${message.type}")
         }
     }
+
 
     companion object {
         private const val TAG = "RealtimeSyncManager"

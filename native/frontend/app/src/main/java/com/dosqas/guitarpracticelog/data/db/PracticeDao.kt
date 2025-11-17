@@ -12,7 +12,7 @@ interface PracticeDao {
     @Query("SELECT * FROM practice_sessions")
     suspend fun getAllSessionsOnce(): List<PracticeSession>
 
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSession(session: PracticeSession)
 
     @Update
