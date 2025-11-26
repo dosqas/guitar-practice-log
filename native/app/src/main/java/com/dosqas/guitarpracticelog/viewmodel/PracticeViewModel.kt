@@ -1,47 +1,82 @@
 package com.dosqas.guitarpracticelog.viewmodel
 
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.State
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import com.dosqas.guitarpracticelog.data.PracticeSession
-import java.time.LocalDate
+import androidx.lifecycle.viewModelScope
+import com.dosqas.guitarpracticelog.data.model.PracticeSession
+import com.dosqas.guitarpracticelog.data.repository.PracticeRepository
+import kotlinx.coroutines.launch
+import android.util.Log
+import kotlinx.coroutines.flow.catch
 
-class PracticeViewModel : ViewModel() {
-    private var nextId = 4  // since we already have 3 hardcoded sessions
+class PracticeViewModel(val repository: PracticeRepository) : ViewModel() {
 
-    // MutableLiveData holds the data that can change
-    private val _sessions = MutableLiveData(
-        listOf(
-            PracticeSession(1, "Nothing Else Matters", LocalDate.now(), 30, "Chords", "Focused on smooth transitions."),
-            PracticeSession(2, "Sweet Child O' Mine", LocalDate.now(), 45, "Solo", "Worked on accuracy."),
-            PracticeSession(3, "Smoke on the Water", LocalDate.now(), 20, "Riff")
-        )
-    )
+    // Sessions retrieved once and exposed as LiveData
+    private val _sessions = mutableStateOf<List<PracticeSession>>(emptyList())
+    val sessionsState: State<List<PracticeSession>> = _sessions
 
-    // Publicly exposed as LiveData (read-only)
-    val sessions: LiveData<List<PracticeSession>> = _sessions
-
-    // Add a new session
-    fun addSession(songTitle: String, date: LocalDate, duration: Int, focus: String, notes: String?) {
-        val currentList = _sessions.value ?: emptyList()
-        val newSession = PracticeSession(nextId++, songTitle, date, duration, focus, notes)
-        _sessions.value = currentList + newSession  // creates a new list with the added item
-    }
-
-    // Update a session
-    fun updateSession(updated: PracticeSession) {
-        val currentList = _sessions.value?.toMutableList() ?: return
-        val index = currentList.indexOfFirst { it.id == updated.id }
-        if (index != -1) {
-            currentList[index] = updated
-            _sessions.value = currentList
+    init {
+        viewModelScope.launch {
+            repository.getAllSessions()
+                .catch { e ->
+                    Log.e("PracticeViewModel", "Fetching sessions failed", e)
+                    _errorMessage.value = "Failed to load sessions: ${e.message}"
+                }
+                .collect { list ->
+                    _sessions.value = list
+                }
         }
     }
 
-    // Delete a session
-    fun deleteSession(id: Int) {
-        val currentList = _sessions.value?.toMutableList() ?: return
-        currentList.removeAll { it.id == id }
-        _sessions.value = currentList
+
+    // Error state observed by the UI
+    private val _errorMessage = mutableStateOf<String?>(null)
+    val errorMessage: State<String?> = _errorMessage
+
+    // Success state observed by the UI
+    private val _success = mutableStateOf(false)
+    val success: State<Boolean> = _success
+
+    fun insertSession(session: PracticeSession) = viewModelScope.launch {
+        try {
+            repository.insertSession(session)
+            _errorMessage.value = null
+            _success.value = true
+        } catch (e: Exception) {
+            Log.e("PracticeViewModel", "Insert failed", e)
+            _errorMessage.value = "Failed to add session: ${e.message}"
+            _success.value = false
+        }
+    }
+
+    fun updateSession(session: PracticeSession) = viewModelScope.launch {
+        try {
+            repository.updateSession(session)
+            _errorMessage.value = null
+            _success.value = true
+        } catch (e: Exception) {
+            Log.e("PracticeViewModel", "Update failed", e)
+            _errorMessage.value = "Failed to update session: ${e.message}"
+            _success.value = false
+        }
+    }
+
+    fun deleteSession(sessionId: Int) = viewModelScope.launch {
+        try {
+            repository.deleteSession(sessionId)
+            _errorMessage.value = null
+        } catch (e: Exception) {
+            Log.e("PracticeViewModel", "Delete failed", e)
+            _errorMessage.value = "Failed to delete session: ${e.message}"
+        }
+    }
+
+    fun clearError() {
+        _errorMessage.value = null
+    }
+
+    fun clearSuccess() {
+        _success.value = false
     }
 }

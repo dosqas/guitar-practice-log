@@ -18,6 +18,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -27,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.dosqas.guitarpracticelog.data.model.PracticeSession
 import com.dosqas.guitarpracticelog.viewmodel.PracticeViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -51,15 +53,22 @@ fun CreateSessionScreen(
     var dateError by remember { mutableStateOf(false) }
     var dateInvalid by remember { mutableStateOf(false) }
     var durationError by remember { mutableStateOf(false) }
-    var durationInvalid by remember { mutableStateOf(false)}
+    var durationInvalid by remember { mutableStateOf(false) }
     var focusAreaError by remember { mutableStateOf(false) }
+
+    val insertSuccess by viewModel.success
+    val errorMessage by viewModel.errorMessage
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Add Session") },
                 navigationIcon = {
-                    IconButton(onClick = { onBack() }) {
+                    IconButton(onClick = {
+                        onBack()
+                        viewModel.clearError()
+                        viewModel.clearSuccess()
+                    }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
@@ -83,15 +92,15 @@ fun CreateSessionScreen(
                         durationInvalid = durationInt == null && duration.isNotBlank()
 
                         if (!songTitleError && !dateError && !dateInvalid && !durationError && !focusAreaError && !durationInvalid) {
-                            viewModel.addSession(
+                            val newSession = PracticeSession(
                                 songTitle = songTitle,
                                 date = parsedDate,
-                                duration = durationInt!!,
-                                focus = focusArea,
-                                notes = notes
+                                durationMinutes = durationInt!!,
+                                focusArea = focusArea,
+                                notes = notes,
                             )
-                            onSave()
-                        }
+
+                            viewModel.insertSession(newSession) }
                     }) {
                         Icon(Icons.Default.Check, contentDescription = "Save")
                     }
@@ -111,6 +120,8 @@ fun CreateSessionScreen(
                 onValueChange = {
                     songTitle = it
                     if (it.isNotBlank()) songTitleError = false
+                    viewModel.clearError()
+                    viewModel.clearSuccess()
                 },
                 label = { Text("Song Title") },
                 isError = songTitleError,
@@ -128,6 +139,8 @@ fun CreateSessionScreen(
 
                     dateError = false
                     dateInvalid = false
+                    viewModel.clearError()
+                    viewModel.clearSuccess()
                 },
                 label = { Text("Date (YYYY-MM-DD)") },
                 singleLine = true,
@@ -147,6 +160,8 @@ fun CreateSessionScreen(
 
                     durationError = false
                     durationInvalid = false
+                    viewModel.clearError()
+                    viewModel.clearSuccess()
                 },
                 label = { Text("Duration (minutes)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -166,6 +181,9 @@ fun CreateSessionScreen(
                 onValueChange = {
                     focusArea = it
                     if (it.isNotBlank()) focusAreaError = false
+
+                    viewModel.clearError()
+                    viewModel.clearSuccess()
                 },
                 label = { Text("Focus Area") },
                 isError = focusAreaError,
@@ -178,10 +196,29 @@ fun CreateSessionScreen(
 
             OutlinedTextField(
                 value = notes,
-                onValueChange = { notes = it },
+                onValueChange = {
+                    notes = it
+                    viewModel.clearError()
+                    viewModel.clearSuccess()
+                },
                 label = { Text("Notes (optional)") },
                 modifier = Modifier.fillMaxWidth()
             )
+
+            errorMessage?.let { msg ->
+                Text(
+                    text = msg,
+                    color = Color.Red,
+                    modifier = Modifier.padding(8.dp)
+                )
+            }
+
+            LaunchedEffect(insertSuccess) {
+                if (insertSuccess) {
+                    onSave()
+                    viewModel.clearSuccess()
+                }
+            }
         }
     }
 }
