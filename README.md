@@ -9,7 +9,7 @@ The project follows the requirements laid out by the course instructor; see full
 
 ---
 
-## 📸 App Mockups
+## 📸 App Mockups - Practice List View + Edit Form (Online/Offline)
 
 <p float="left">
   <img src="demo/practice_list_view.png" width="200" />
