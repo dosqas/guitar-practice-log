@@ -13,15 +13,15 @@ The project follows the requirements laid out by the course instructor; see full
 
 ### Practice List View
 
-![Practice List View](path/to/practice_list_view.png)
+![Practice List View](demo/practice_list_view.png)
 
 ### Edit Form
 
-![Edit Form](path/to/edit_form.png)
+![Edit Form](demo/edit_form.png)
 
 ### Edit Form (Offline)
 
-![Edit Form Offline](path/to/edit_form_offline.png)
+![Edit Form Offline](demo/edit_form_offline.png)
 
 ---
 
