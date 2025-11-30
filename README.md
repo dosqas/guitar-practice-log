@@ -11,17 +11,11 @@ The project follows the requirements laid out by the course instructor; see full
 
 ## 📸 App Mockups
 
-### Practice List View
-
-![Practice List View](demo/practice_list_view.png)
-
-### Edit Form
-
-![Edit Form](demo/edit_form.png)
-
-### Edit Form (Offline)
-
-![Edit Form Offline](demo/edit_form_offline.png)
+<p float="left">
+  <img src="demo/practice_list_view.png" width="200" />
+  <img src="demo/edit_form.png" width="200" />
+  <img src="demo/edit_form_offline.png" width="200" />
+</p>
 
 ---
 
