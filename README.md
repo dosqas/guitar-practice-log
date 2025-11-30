@@ -1,4 +1,4 @@
-# 🎸 Guitar Practice Log — Mobile App
+# 🎸 Guitar Practice Log - Mobile App
 
 A project built with **Kotlin Multiplatform** for cross-platform UI and **native Android/Kotlin** for the full app, paired with a **Spring Boot + JPA + Hibernate** server.  
 It tracks guitar practice sessions with full offline support and automatic synchronization to the custom REST server.
@@ -97,8 +97,8 @@ When connection returns:
 The server is **implemented manually** using **Spring Boot**, **JPA**, and **Hibernate** (no Firebase, no serverless platforms).
 Communication uses **REST + WebSockets**:
 
-* **REST** → main CRUD operations
-* **WebSocket** → real-time updates pushed to the Android client
+* **REST** -> main CRUD operations
+* **WebSocket** -> real-time updates pushed to the Android client
 * Both the client and server include **full debug logging**
 
 ---
